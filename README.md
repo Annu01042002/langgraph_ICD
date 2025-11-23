@@ -1,62 +1,324 @@
-# langgraph-ICD
+# LangGraph ICD Agent
 
-Lightweight prototype that uses LangGraph + LangChain tools to retrieve disease descriptions and ICD codes using a local FAISS vector store and web search (Tavily). Main entrypoint is the Jupyter notebook `icd_agent.ipynb`.
+An intelligent implementation leveraging **LangGraph** and **LangChain** to automate disease information retrieval and ICD code lookup through a hybrid search architecture combining local vector embeddings and web intelligence.
 
-## Features
-- Build a FAISS vector store from PDF documents.
-- Search for disease descriptions via embeddings (Google Generative AI embeddings).
-- Fall back to Tavily web search for ICD codes if not present in the vector store.
-- Agent workflow implemented with LangChain React-style agent and LangGraph StateGraph.
-- Outputs final structured result to `output.json` and `output.csv`.
+## 📋 Overview
 
-## Quickstart (Windows)
-1. Clone / open project folder in VS Code.
-2. Install dependencies (run in terminal / VS Code integrated terminal):
+This system implements an intelligent agent workflow that:
+- **Retrieves** disease descriptions from a local FAISS vector store (built from PDF knowledge bases)
+- **Augments** search results via Tavily web search when vector store data is insufficient
+- **Normalizes** outputs into structured JSON/CSV formats suitable for downstream processing
+- **Supports** multiple LLM backends (NVIDIA NIMS, Google Gemini) for flexible deployment
+
+### Architecture
+```
+User Query
+    ↓
+LangChain ReAct Agent (with LLM)
+    ├── VectorSearch Tool (FAISS + Google Embeddings)
+    └── TavilySearch Tool (Web API)
+    ↓
+LangGraph StateGraph Orchestration
+    ↓
+Structured Output (JSON/CSV)
+```
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| **Dual LLM Support** | NVIDIA NIMS (primary) & Google Gemini (secondary) implementations |
+| **Vector Store** | FAISS-backed local embeddings for low-latency retrieval |
+| **Hybrid Search** | Vector + web search fallback for comprehensive coverage |
+| **Agent Framework** | ReAct-style agent with tool composition via LangChain |
+| **State Management** | Type-safe graph orchestration with LangGraph |
+| **Multi-format Output** | JSON & CSV export for integrations |
+| **PDF Ingestion** | Automatic document loading and chunking |
+| **Multiple Run Modes** | Jupyter Notebooks or standalone Python scripts |
+
+## 🚀 Quickstart
+
+### Prerequisites
+- **Python** 3.9+
+- **Windows/Linux/macOS**
+- API Keys: GEMINI_API_KEY, TAVILY_API_KEY, (optionally) NVIDIA_API_KEY
+
+### Installation
+
+1. **Clone repository:**
+   ```bash
+   git clone <repo-url>
+   cd langgraph-ICD
    ```
+
+2. **Create virtual environment (recommended):**
+   ```bash
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1  # Windows PowerShell
+   # or
+   source venv/bin/activate     # macOS/Linux
+   ```
+
+3. **Install dependencies:**
+
+   **For Jupyter Notebooks (One-go installation):**
+   ```bash
+   %pip install langgraph langchain langchain-google-genai langchain-community faiss-cpu openai pypdf python-dotenv
+   ```
+   *Run this command directly in the first notebook cell. Dependencies install in a single batch.*
+
+   **For Python Script (.py file):**
+   ```bash
+   pip install -r requirements.txt
+   ```
+   *Or manually install all dependencies:*
+   ```bash
    pip install langgraph langchain langchain-google-genai langchain-community faiss-cpu openai pypdf python-dotenv
    ```
-3. Place your PDFs as `document1.pdf`, `document2.pdf`, ... in the project root (or update the loader paths in the notebook).
-4. Create a `.env` file in the project root or set environment variables in your shell:
-   - NVIDIA_API_KEY — (optional) for NVIDIA chat integration
-   - GEMINI_API_KEY — required for Google Generative embeddings
-   - TAVILY_API_KEY — required for Tavily search
-   Example `.env` (used by python-dotenv):
-   ```
-   NVIDIA_API_KEY=your_nvidia_key
-   GEMINI_API_KEY=your_gemini_key
-   TAVILY_API_KEY=your_tavily_key
-   ```
-   On Windows PowerShell you can temporarily set an env var:
-   ```
-   $env:GEMINI_API_KEY="your_gemini_key"
+
+4. **Configure environment:**
+   Create `.env` file in project root:
+   ```env
+   # Required
+   GEMINI_API_KEY=sk-...your-gemini-key...
+   TAVILY_API_KEY=tvly-...your-tavily-key...
+
+   # Optional (for NVIDIA backend)
+   NVIDIA_API_KEY=nvapi-...your-nvidia-key...
    ```
 
-5. Open and run `icd_agent.ipynb` in VS Code / Jupyter. The notebook contains cells to:
-   - Install packages
-   - Define NvidiaChatModel wrapper
-   - Create / load FAISS index from PDFs
-   - Build & run the agent
-   - Save `output.json` and `output.csv`
+   **Note:** Never commit `.env` to version control. Add to `.gitignore`:
+   ```
+   .env
+   .env.local
+   ```
 
-6. Example run from notebook:
-   - The notebook's `main("Gallstones")` will execute the StateGraph agent and write `output.json` / `output.csv`.
+5. **Prepare knowledge base:**
+   Place PDF documents in project root:
+   ```
+   document1.pdf
+   document2.pdf
+   document3.pdf
+   ```
 
-## Files of interest
-- `icd_agent.ipynb` — primary notebook implemented using NVIDIA NIMS LLM (custom NvidiaChatModel wrapper / NVIDIA chat).
-- `icd_agent_gemini.ipynb` — secondary notebook implemented using Google Gemini LLM (ChatGoogleGenerativeAI).
-- `output.json`, `output.csv` — produced by `main()` after running the agent.
-- PDF documents (document1.pdf, ...)
+6. **Run the application:**
 
-## Notes & troubleshooting
-- Ensure the GEMINI_API_KEY is valid and billing enabled for embeddings.
-- FAISS index will be saved locally as `faiss_index` by `create_vector_store()`.
-- If PDFs are missing the loader will skip and the graph may return fallbacks.
-- The Nvidia/OpenAI client usage in the notebook is a custom wrapper — confirm the client class and base_url match your SDK version.
-- Increase `max_iterations` / `max_execution_time` in the agent if timeouts occur.
+   **Option A: Jupyter Notebook**
+   ```bash
+   # VS Code
+   code .
+   # Then open icd_agent.ipynb or icd_agent_gemini.ipynb and run cells
 
-## Extending
-- Swap embeddings provider or change chunk size in `CharacterTextSplitter`.
-- Add more documents or a different vector store backend.
-- Improve parsing in `generate_output()` for varied agent text formats.
+   # Or Jupyter CLI
+   jupyter notebook icd_agent.ipynb
+   ```
 
-No license specified — treat as experimental prototype.
+   **Option B: Python Script**
+   ```bash
+   python icd_agent.py
+   ```
+
+## 📁 Project Structure
+
+```
+langgraph-ICD/
+├── icd_agent.py                 # ⭐ PRIMARY: Standalone Python script (NVIDIA NIMS)
+├── icd_agent.ipynb              # PRIMARY: Jupyter notebook (NVIDIA NIMS)
+├── icd_agent_gemini.ipynb       # SECONDARY: Jupyter notebook (Google Gemini)
+├── graph_visualizer.py          # Graph visualization utility
+├── document1.pdf                # Knowledge base (user-provided)
+├── document2.pdf
+├── document3.pdf
+├── faiss_index/                 # Auto-generated vector store (gitignored)
+├── output.json                  # Query results (auto-generated)
+├── output.csv                   # Query results (auto-generated)
+├── .env                         # API keys (gitignored)
+├── .gitattributes               # EOL normalization rules
+├── requirements.txt             # Dependency manifest
+└── README.md                    # This file
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `GEMINI_API_KEY` | ✓ | Google Generative AI embeddings & LLM |
+| `TAVILY_API_KEY` | ✓ | Web search fallback |
+| `NVIDIA_API_KEY` | ✗ | NVIDIA NIMS LLM (NVIDIA backend only) |
+
+### Runtime Options
+
+Edit cells in notebook or code in `icd_agent.py` to customize:
+
+**Vector Store Chunk Size:**
+```python
+text_splitter = CharacterTextSplitter(
+    chunk_size=1000,      # Increase for larger contexts
+    chunk_overlap=100     # Overlap for boundary relevance
+)
+```
+
+**Agent Iterations:**
+```python
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    max_iterations=7,           # Tool invocation limit
+    max_execution_time=120.0,   # Timeout in seconds
+    verbose=True
+)
+```
+
+**LLM Temperature (creativity vs consistency):**
+```python
+llm = NvidiaChatModel(
+    temperature=0.6,    # 0.0 = deterministic, 1.0 = creative
+    top_p=0.7,
+    max_tokens=4096
+)
+```
+
+## 📊 Usage Examples
+
+### Basic Query via Python Script
+```python
+from icd_agent import main
+
+result = main("fever")
+# Output:
+# {
+#   "disease": "fever",
+#   "description": "...",
+#   "icd_codes": ["R50.9", "R50.0", ...]
+# }
+```
+
+### Basic Query via Jupyter Notebook
+```python
+# Last cell in notebook:
+main("Gallstones")  # Returns structured JSON output
+```
+
+### Batch Processing
+```python
+queries = ["diabetes", "hypertension", "pneumonia"]
+results = [main(q) for q in queries]
+
+# Export to CSV
+import csv
+with open('batch_results.csv', 'w', newline='') as f:
+    writer = csv.DictWriter(f, fieldnames=['disease', 'description', 'icd_codes'])
+    writer.writerows(results)
+```
+
+## 🏗️ Architecture Details
+
+### Agent Workflow (ReAct Pattern)
+
+1. **Thought** → Agent analyzes query and selects tool
+2. **Action** → Invoke VectorSearch or TavilySearch
+3. **Observation** → Parse tool results
+4. **Thought** → Decide: sufficient data? → YES: compile answer / NO: repeat
+5. **Final Answer** → Structured JSON output
+
+### Vector Store Pipeline
+
+```
+PDFs → PyPDFLoader → Split (1000-token chunks) 
+  → Google Embeddings → FAISS Index → Similarity Search
+```
+
+### State Management
+
+```python
+class AgentState(TypedDict):
+    human_input: str           # User query
+    messages: Sequence[HumanMessage]  # Conversation history
+    results: dict              # Accumulated results
+```
+
+## ⚙️ Implementation Variants
+
+| File | Type | LLM Provider | Strengths | Best For |
+|------|------|-------------|-----------|----------|
+| `icd_agent.py` | Script | NVIDIA NIMS | Cost-effective, low latency | Production, CLI usage, automation |
+| `icd_agent.ipynb` | Notebook | NVIDIA NIMS | Interactive debugging, visualization | Development, testing |
+| `icd_agent_gemini.ipynb` | Notebook | Google Gemini | Advanced reasoning, multimodal | Complex queries, research |
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `GEMINI_API_KEY not found` | Verify `.env` exists in project root; reload notebook kernel or restart Python script |
+| `FileNotFoundError: document1.pdf` | Place PDFs in project root; update loader paths if needed |
+| `FAISS index corrupted` | Delete `faiss_index/` folder; restart to regenerate |
+| Agent timeout after 120s | Increase `max_execution_time` or reduce knowledge base size |
+| PDF line ending warnings | Run `git add --renormalize .` after adding `.gitattributes` |
+| Low relevance results | Adjust `chunk_size` in `CharacterTextSplitter`; add more PDFs |
+| `ModuleNotFoundError` in .py script | Ensure virtual environment activated & `requirements.txt` installed: `pip install -r requirements.txt` |
+| Notebook cells fail silently | Check `.env` file exists; verify API keys are valid; check internet connection for web search |
+
+## 📈 Performance Tuning
+
+**For Speed:**
+- Reduce `chunk_size` (trade-off: less context per result)
+- Lower `k` parameter in `similarity_search(query, k=1)` (fewer results)
+
+**For Accuracy:**
+- Increase `chunk_size` & `chunk_overlap`
+- Raise `max_iterations` in agent
+- Use `temperature=0.0` for deterministic outputs
+
+**For Cost:**
+- Cache embeddings: check FAISS save/load logic
+- Batch queries to reuse single agent initialization
+- Use NVIDIA backend instead of Gemini for high volume
+
+## 🔐 Security Best Practices
+
+- ✅ Store API keys in `.env` (add to `.gitignore`)
+- ✅ Never log raw API keys; use redaction
+- ✅ Validate user queries for injection attacks
+- ✅ Implement rate limiting for web API calls
+- ✅ Use `.gitattributes` to prevent binary corruption in PDFs
+- ✅ Rotate API keys periodically
+
+## 📝 Output Formats
+
+### JSON Structure
+```json
+{
+  "disease": "Gallstones",
+  "description": "Hardened deposits of digestive fluid...",
+  "icd_codes": ["K80.0", "K80.1", "K80.2"]
+}
+```
+
+### CSV Structure
+```
+Disease,Description,ICD Codes
+Gallstones,Hardened deposits...,K80.0; K80.1; K80.2
+```
+
+## 📚 References
+
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [LangChain ReAct Agent](https://python.langchain.com/docs/modules/agents/)
+- [FAISS Index](https://github.com/facebookresearch/faiss)
+- [ICD-10 Official](https://www.who.int/standards/classifications/classification-of-diseases)
+- [Tavily Search API](https://tavily.com/)
+
+## 📄 License
+
+Experimental prototype. No license specified. For production use, consult organization policies.
+
+## 👥 Authors
+
+- Annu (Contributor)
+
+---
+
+**Last Updated:** November 23, 2025  
+**Status:** ⚠️ Experimental Prototype (Not production-ready without review)
