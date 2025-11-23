@@ -33,7 +33,7 @@ Structured Output (JSON/CSV)
 | **Agent Framework** | ReAct-style agent with tool composition via LangChain |
 | **State Management** | Type-safe graph orchestration with LangGraph |
 | **Multi-format Output** | JSON & CSV export for integrations |
-| **PDF Ingestion** | Automatic document loading and chunking |
+| **PDF Ingestion** | Automatic document loading and chunking from `data/` folder |
 | **Multiple Run Modes** | Jupyter Notebooks or standalone Python scripts |
 
 ## 🚀 Quickstart
@@ -94,11 +94,19 @@ Structured Output (JSON/CSV)
    ```
 
 5. **Prepare knowledge base:**
-   Place PDF documents in project root:
+   Create a `data/` folder and place PDF documents inside:
+   ```bash
+   mkdir data
+   # Copy PDFs into data folder
+   cp *.pdf data/
    ```
-   document1.pdf
-   document2.pdf
-   document3.pdf
+   
+   **Or manually:**
+   ```
+   data/
+   ├── document1.pdf
+   ├── document2.pdf
+   └── document3.pdf
    ```
 
 6. **Run the application:**
@@ -126,9 +134,10 @@ langgraph-ICD/
 ├── icd_agent.ipynb              # PRIMARY: Jupyter notebook (NVIDIA NIMS)
 ├── icd_agent_gemini.ipynb       # SECONDARY: Jupyter notebook (Google Gemini)
 ├── graph_visualizer.py          # Graph visualization utility
-├── document1.pdf                # Knowledge base (user-provided)
-├── document2.pdf
-├── document3.pdf
+├── data/                        # Knowledge base PDFs (user-provided)
+│   ├── document1.pdf
+│   ├── document2.pdf
+│   └── document3.pdf
 ├── faiss_index/                 # Auto-generated vector store (gitignored)
 ├── output.json                  # Query results (auto-generated)
 ├── output.csv                   # Query results (auto-generated)
@@ -146,7 +155,7 @@ langgraph-ICD/
 |----------|----------|---------|
 | `GEMINI_API_KEY` | ✓ | Google Generative AI embeddings & LLM |
 | `TAVILY_API_KEY` | ✓ | Web search fallback |
-| `NVIDIA_API_KEY` | ✗ | NVIDIA NIMS LLM (NVIDIA backend only) |
+| `NVIDIA_API_KEY` | ✓ | NVIDIA NIMS LLM |
 
 ### Runtime Options
 
@@ -226,7 +235,7 @@ with open('batch_results.csv', 'w', newline='') as f:
 ### Vector Store Pipeline
 
 ```
-PDFs → PyPDFLoader → Split (1000-token chunks) 
+PDFs (from data/) → PyPDFLoader → Split (1000-token chunks) 
   → Google Embeddings → FAISS Index → Similarity Search
 ```
 
@@ -252,11 +261,11 @@ class AgentState(TypedDict):
 | Issue | Solution |
 |-------|----------|
 | `GEMINI_API_KEY not found` | Verify `.env` exists in project root; reload notebook kernel or restart Python script |
-| `FileNotFoundError: document1.pdf` | Place PDFs in project root; update loader paths if needed |
-| `FAISS index corrupted` | Delete `faiss_index/` folder; restart to regenerate |
+| `No PDF files found in 'data' directory` | Create `data/` folder and place PDFs inside: `mkdir data && cp *.pdf data/` |
+| `FAISS index corrupted` | Delete `faiss_index/` folder; restart to regenerate from `data/` folder PDFs |
 | Agent timeout after 120s | Increase `max_execution_time` or reduce knowledge base size |
 | PDF line ending warnings | Run `git add --renormalize .` after adding `.gitattributes` |
-| Low relevance results | Adjust `chunk_size` in `CharacterTextSplitter`; add more PDFs |
+| Low relevance results | Adjust `chunk_size` in `CharacterTextSplitter`; add more PDFs to `data/` folder |
 | `ModuleNotFoundError` in .py script | Ensure virtual environment activated & `requirements.txt` installed: `pip install -r requirements.txt` |
 | Notebook cells fail silently | Check `.env` file exists; verify API keys are valid; check internet connection for web search |
 
@@ -284,6 +293,7 @@ class AgentState(TypedDict):
 - ✅ Implement rate limiting for web API calls
 - ✅ Use `.gitattributes` to prevent binary corruption in PDFs
 - ✅ Rotate API keys periodically
+- ✅ Keep `data/` folder private; don't commit sensitive PDFs
 
 ## 📝 Output Formats
 

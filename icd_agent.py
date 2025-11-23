@@ -16,9 +16,14 @@ from openai import OpenAI
 import json
 import csv
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Define data directory
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
 
 
 # Custom NVIDIA Chat Model
@@ -113,9 +118,9 @@ def initialize_llm_and_tools():
 # Vector Store Management
 def create_vector_store():
     """
-    Create a vector store from PDF documents.
+    Create a vector store from PDF documents in the data folder.
     
-    This function loads PDF documents, splits the text into chunks, 
+    This function loads PDF documents from the 'data' directory, splits the text into chunks, 
     and creates embeddings using Google Generative AI.
     
     Returns:
@@ -129,34 +134,40 @@ def create_vector_store():
             google_api_key=os.getenv("GEMINI_API_KEY")
         )
         vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-        print("Loaded existing vector store.")
+        print("✓ Loaded existing vector store.")
         return vector_store
     except Exception as e:
-        print(f"Could not load existing vector store: {e}. Creating new vector store...")
+        print(f"⚠ Could not load existing vector store: {e}. Creating new vector store...")
     
-    # Loading documents
+    # Loading documents from data folder
     documents = []
-    try:
-        for i in range(1, 4):
-            try:
-                loader = PyPDFLoader(f"document{i}.pdf")
-                documents.extend(loader.load())
-            except FileNotFoundError:
-                print(f"File document{i}.pdf not found, skipping.")
-    except Exception as e:
-        print(f"Error loading documents: {e}")
-        # Fallback to loading just the first document
+    pdf_files = list(DATA_DIR.glob("*.pdf"))
+    
+    if not pdf_files:
+        print(f"⚠ No PDF files found in '{DATA_DIR}' directory.")
+        print(f"  Please place PDF documents in: {DATA_DIR.absolute()}")
+        return None
+    
+    print(f"📄 Found {len(pdf_files)} PDF file(s) in '{DATA_DIR}' directory.")
+    
+    for pdf_file in pdf_files:
         try:
-            loader = PyPDFLoader("document_1.pdf")
+            print(f"  Loading: {pdf_file.name}")
+            loader = PyPDFLoader(str(pdf_file))
             documents.extend(loader.load())
-        except FileNotFoundError:
-            print("Critical: No documents found")
-            return None
+        except Exception as e:
+            print(f"  ⚠ Error loading {pdf_file.name}: {e}")
+    
+    if not documents:
+        print("⚠ Critical: No documents loaded from PDF files.")
+        return None
+    
+    print(f"✓ Successfully loaded {len(documents)} document pages.")
     
     # Splitting documents and creating text representations
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     texts = text_splitter.split_documents(documents)
-    print(f"Number of text chunks: {len(texts)}")
+    print(f"✓ Split documents into {len(texts)} text chunks.")
     
     # Create embeddings using a Google Generative AI model
     embeddings = GoogleGenerativeAIEmbeddings(
@@ -165,10 +176,13 @@ def create_vector_store():
     )
     
     # Create a vector store using FAISS from the provided text chunks and embeddings
+    print("🔄 Creating FAISS vector store...")
     vector_store = FAISS.from_documents(texts, embedding=embeddings)
     
     # Save the vector store locally with the name "faiss_index"
     vector_store.save_local("faiss_index")
+    print("✓ Vector store saved to 'faiss_index'.")
+    
     return vector_store
 
 
@@ -176,24 +190,24 @@ def create_vector_store():
 def search_vector_store(query: str, vector_store) -> str:
     """Search the vector store for relevant information"""
     try:
-        print(f"Starting vector search for query: {query}")
+        print(f"🔍 Starting vector search for query: {query}")
         results = vector_store.similarity_search(query, k=1)
-        print(f"Vector search results: {results}")
+        print(f"✓ Vector search results found.")
         return results[0].page_content
     except Exception as e:
-        print(f"Error searching vector store: {e}")
+        print(f"⚠ Error searching vector store: {e}")
         return "No information found in the vector store."
 
 
 def execute_tavily_tool(query: str, tavily_tool) -> str:
     """Execute Tavily web search"""
     try:
-        print(f"Starting Tavily search for query: {query}")
+        print(f"🌐 Starting Tavily web search for query: {query}")
         results = tavily_tool.run(query)
-        print(f"Tavily search results: {results}")
+        print(f"✓ Tavily search results found.")
         return results
     except Exception as e:
-        print(f"Error in Tavily search: {e}")
+        print(f"⚠ Error in Tavily search: {e}")
         return "No information found using Tavily."
 
 
@@ -294,7 +308,7 @@ def agent_node(state: AgentState, agent_executor):
         
         # Check if the result contains the final JSON output
         if isinstance(result, dict) and "disease" in result and "description" in result and "icd_codes" in result:
-            print("Final result obtained. Terminating chain.")
+            print("✓ Final result obtained. Terminating chain.")
             return {
                 "messages": state.get("messages", []),
                 "results": result
@@ -306,7 +320,7 @@ def agent_node(state: AgentState, agent_executor):
             "results": result.get("output", "No output from agent")
         }
     except Exception as e:
-        print(f"Error in agent_node: {e}")
+        print(f"❌ Error in agent_node: {e}")
         return {
             "messages": state.get("messages", []),
             "results": f"Error processing request: {str(e)}"
@@ -340,12 +354,12 @@ def run_graph(query: str, graph):
         
         # Check if the result contains the final JSON output
         if isinstance(result, dict) and "disease" in result["results"] and "description" in result["results"] and "icd_codes" in result["results"]:
-            print("Final result obtained. Stopping execution.")
+            print("✓ Final result obtained. Stopping execution.")
             return result["results"]
         
         return result["results"]
     except Exception as e:
-        print(f"Error running graph: {e}")
+        print(f"❌ Error running graph: {e}")
         return f"Error: {str(e)}"
 
 
@@ -399,7 +413,7 @@ def generate_output(query: str, result):
         
         return json_output, csv_output
     except Exception as e:
-        print(f"Error generating output: {e}")
+        print(f"❌ Error generating output: {e}")
         json_output = {"error": str(e), "query": query}
         csv_output = [["Error", "Query"], [str(e), query]]
         return json_output, csv_output
@@ -409,37 +423,52 @@ def generate_output(query: str, result):
 def main(query: str):
     """Main function to run the agent and save results"""
     
-    print(f"Processing query: {query}")
+    print(f"\n{'='*60}")
+    print(f"🏥 ICD Agent - Disease Information Retrieval")
+    print(f"{'='*60}")
+    print(f"📋 Processing query: {query}\n")
     
     # Initialize components
+    print("⚙️ Initializing components...")
     llm, tavily_tool = initialize_llm_and_tools()
+    print("✓ LLM and Tavily initialized.")
+    
+    print("\n📚 Loading knowledge base...")
     vector_store = create_vector_store()
     
     if vector_store is None:
-        raise ValueError("Failed to create vector store")
+        raise ValueError("❌ Failed to create vector store. Please check PDF files in 'data' folder.")
     
     tools = create_tools(vector_store, tavily_tool)
+    print("✓ Tools created.")
+    
+    print("\n🤖 Creating agent...")
     agent_executor = create_agent(llm, tools)
     graph = create_graph(agent_executor)
+    print("✓ Agent created and graph compiled.")
     
-    # Run the graph
+    print("\n⏳ Running agent...")
     result = run_graph(query, graph)
-    print(f"Result from graph: {result}")
+    print(f"\n📦 Result from graph: {result}")
     
     # Generate outputs
+    print("\n💾 Generating outputs...")
     json_output, csv_output = generate_output(query, result)
     
     # Save JSON output
     with open('output.json', 'w') as f:
         json.dump(json_output, f, indent=2)
+    print("✓ JSON output saved to 'output.json'")
     
     # Save CSV output
     with open('output.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerows(csv_output)
+    print("✓ CSV output saved to 'output.csv'")
     
-    print("JSON output:", json_output)
-    print("CSV output has been saved to output.csv")
+    print(f"\n📊 Final Result:")
+    print(json.dumps(json_output, indent=2))
+    print(f"{'='*60}\n")
     
     return json_output
 
