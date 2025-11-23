@@ -322,13 +322,10 @@ Gallstones,Hardened deposits...,K80.0; K80.1; K80.2
 
 ## 📄 License
 
-Experimental prototype. No license specified. For production use, consult organization policies.
+Experimental prototype. No license specified.
 
 ## 👥 Authors
 
-- Annu (Contributor)
+- Annu (Owner)
 
 ---
-
-**Last Updated:** November 23, 2025  
-**Status:** ⚠️ Experimental Prototype (Not production-ready without review)
