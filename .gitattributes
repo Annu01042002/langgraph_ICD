@@ -1,0 +1,5 @@
+# Prevent Git from changing line endings for binary files
+*.pdf binary
+
+# Keep Jupyter notebooks as text with LF in repo (optional)
+*.ipynb text eol=lf

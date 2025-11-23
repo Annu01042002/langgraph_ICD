@@ -1,0 +1,24 @@
+{
+  "disease": "Gallstones",
+  "description": "Gallstones are hardened deposits of digestive fluid that can form in your gallbladder. Your gallbladder is a small, pear-shaped organ on the right side of your abdomen, just beneath your liver.",
+  "icd_codes": [
+    "K80.00",
+    "K80.01",
+    "K80.10",
+    "K80.11",
+    "K80.12",
+    "K80.13",
+    "K80.18",
+    "K80.19",
+    "K80.20",
+    "K80.21",
+    "K80.30",
+    "K80.31",
+    "K80.32",
+    "K80.33",
+    "K80.34",
+    "K80.35",
+    "K80.36",
+    "K80.37"
+  ]
+}
